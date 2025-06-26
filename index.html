@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Şube Satış Lider Tablosu</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #e9eef4;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    header {
+      background-color: #004080;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    #logo {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      height: 60px;
+    }
+    main {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: calc(100vh - 80px);
+      animation: rotateView 20s infinite linear;
+    }
+    table {
+      width: 45%;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      animation: fadeIn 1s;
+    }
+    th, td {
+      padding: 16px;
+      text-align: center;
+    }
+    th {
+      background-color: #007BFF;
+      color: white;
+    }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    tr.highlight {
+      animation: flash 1s ease-in-out;
+      background-color: #ffef96 !important;
+    }
+    canvas {
+      width: 45% !important;
+      height: 400px !important;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    @keyframes flash {
+      0% { background-color: #ffef96; }
+      100% { background-color: #f9f9f9; }
+    }
+    @keyframes rotateView {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(-10px); }
+      100% { transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img id="logo" src="https://via.placeholder.com/120x60?text=LOGO" alt="Logo">
+    Aylık Şube Satış Lider Tablosu
+  </header>
+  <main>
+    <table id="leaderboard">
+      <thead>
+        <tr>
+          <th>Sıra</th>
+          <th>Şube</th>
+          <th>Satış</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <canvas id="chart"></canvas>
+  </main>
+
+  <script>
+    const sheetURL = 'https://opensheet.elk.sh/1U9H3T3L0y7G-NuoJ1j4I6_OzYaXAo0kZ4m-KNL8aJPE/Sayfa1';
+
+    let previousOrder = [];
+
+    function updateLeaderboard(data) {
+      data.sort((a, b) => Number(b["Satış Sayısı"]) - Number(a["Satış Sayısı"]));
+      const tbody = document.querySelector('#leaderboard tbody');
+      tbody.innerHTML = '';
+
+      const currentOrder = [];
+
+      data.forEach((item, index) => {
+        currentOrder.push(item["Şube Adı"]);
+
+        const tr = document.createElement('tr');
+        if (previousOrder[index] !== item["Şube Adı"] && previousOrder.length > 0) {
+          tr.classList.add('highlight');
+        }
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${item["Şube Adı"]}</td>
+          <td>${item["Satış Sayısı"]}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      previousOrder = currentOrder;
+
+      updateChart(data);
+    }
+
+    let chart;
+    function updateChart(data) {
+      const ctx = document.getElementById('chart').getContext('2d');
+      const labels = data.map(d => d["Şube Adı"]);
+      const sales = data.map(d => Number(d["Satış Sayısı"]));
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Satış Sayısı',
+            data: sales,
+            backgroundColor: '#007BFF'
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    async function fetchData() {
+      const res = await fetch(sheetURL);
+      const data = await res.json();
+      updateLeaderboard(data);
+    }
+
+    fetchData();
+    setInterval(fetchData, 10000);
+  </script>
+</body>
+</html>
